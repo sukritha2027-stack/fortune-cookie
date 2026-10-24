@@ -37,7 +37,7 @@ Each slider question measures a dimension (mood, water, energy, sleep, stress, s
 
 - **Frontend:** plain HTML, CSS and JavaScript (no build step). Deploys anywhere as static files.
 - **Auth + database:** [Supabase](https://supabase.com) (email/password auth, Postgres, Row Level Security so users can only read their own data).
-- **Payments:** [Dodo Payments](https://dodopayments.com) checkout link for the ₹199/month subscription.
+- **Payments:** [Dodo Payments](https://dodopayments.com) checkout link for the ₹199/month subscription, confirmed by a signed webhook (`api/dodo-webhook.js`, a Vercel function).
 - **Hosting:** Vercel.
 - **Sound:** an original music-box lullaby (low-volume loop, toggleable), an ASMR cookie-crack and a paper-crinkle-and-pling effect. All three were synthesised for this project (`sounds/`) and played through the Web Audio API so volume works on iPhone too.
 - **Share cards:** drawn on an HTML canvas and exported as PNG.
@@ -47,7 +47,9 @@ index.html     page structure
 styles.css     design system (colours, fonts, animations, responsive layout)
 app.js         auth, quiz, fortune engine, cracking animation, share cards, calendar, journal, Plus, dashboard
 content.js     question bank, cookie types, fortunes, journal prompts, walkthrough copy
-config.js      Supabase + Dodo keys
+config.js      Supabase keys + Dodo payment link
+api/           dodo-webhook.js: Vercel function that switches Plus on/off
+supabase/      dodo-payments.sql: columns + locks the plan column
 images/        cookie character poses
 sounds/        lullaby.mp3, crack.mp3, paper.mp3
 ```
@@ -64,15 +66,20 @@ If `SUPABASE_URL` / `SUPABASE_ANON_KEY` are left empty in `config.js`, the app r
 
 ---
 
-## Payments: current state and production plan
+## Payments (Dodo Payments, live)
 
-Clicking **Get the whole universe** sends the user to the Dodo Payments checkout (test mode). Dodo redirects back to the app with `?upgraded=1` / `status=active`, and the app upgrades the account to Plus.
+Plus is a ₹199/month subscription sold through a Dodo Payments checkout link.
 
-**Known limitation (deliberate, for the class timeline):** the upgrade is applied by the browser after the redirect, so a technical user could fake it. In production, a Dodo **webhook** would call a server function (e.g. a Supabase Edge Function or Vercel serverless function) that verifies the webhook signature and sets `plan = 'plus'` using the service key, and the `profiles.plan` column would be made read-only for users.
+1. **Get the whole universe** opens Dodo checkout with the user's email prefilled and `metadata_user_id` set to their account id.
+2. After paying, Dodo sends a signed webhook to `api/dodo-webhook.js` (a Vercel serverless function).
+3. The function verifies the signature (Standard Webhooks), finds the account from `metadata_user_id`, and sets `profiles.plan` to `plus` with the Supabase service-role key. Renewals keep it on; when a subscription is cancelled and runs out, expires or fails, the plan goes back to `free`.
+4. Back on the site, the app shows "Confirming your payment…" and waits for the webhook to flip the plan.
 
-Owner/test accounts listed in `PLUS_EMAILS` in `config.js` get Plus without paying. A "Switch back to Free (for testing)" link is included so graders can test both tiers on one account.
+Browsers **cannot** change their own plan: `supabase/dodo-payments.sql` revokes update rights on `plan` from signed-in users, so adding `?upgraded=1` to the URL does nothing.
 
----
+**Setup:** run `supabase/dodo-payments.sql` once in the Supabase SQL editor; add `DODO_PAYMENTS_WEBHOOK_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel → Settings → Environment Variables; register `https://<site>/api/dodo-webhook` in Dodo → Developer → Webhooks (live mode).
+
+Owner/test accounts listed in `PLUS_EMAILS` in `config.js` see Plus for free and get a **Preview as Free** toggle (stored only on that device) to test both tiers.
 
 ## Run locally
 ```bash
@@ -84,5 +91,5 @@ python3 -m http.server 8000
 1. Create an account → walkthrough → check-in → tap the cookie (sound on 🔊).
 2. Get the card → try Post / Story / Square and the share buttons.
 3. Write something in Manifest → *Send it to the universe* → see the ✎ on today in the calendar.
-4. Upgrade with a Dodo **test card**: `4242 4242 4242 4242`, any future expiry, any CVC.
+4. Payments are live (real ₹199 charge). To see Plus without paying, ask the owner to add your email to `PLUS_EMAILS`, or use an owner account and the *Preview as Free* toggle.
 5. As Plus: open any themed cookie, crack another daily cookie, view the dashboard.

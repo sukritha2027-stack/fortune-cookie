@@ -1,0 +1,13 @@
+{
+  "name": "fortune-cookie",
+  "private": true,
+  "type": "module",
+  "description": "Fortune Cookie: static site + one Vercel function for Dodo Payments webhooks",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "standardwebhooks": "^1.0.0"
+  }
+}

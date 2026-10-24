@@ -107,7 +107,9 @@
      ========================================================= */
   const State = { user: null, profile: null, cookies: [], journals: [], calMonth: new Date(), current: null };
   const isOwner = () => !!(State.user && State.user.email && (CFG.PLUS_EMAILS || []).map((e) => e.toLowerCase()).includes(State.user.email.toLowerCase()));
-  const isPlus = () => isOwner() || (State.profile && State.profile.plan === "plus");
+  // Owner accounts can preview the Free tier on this device (never saved to the database).
+  const previewFree = () => { try { return sessionStorage.getItem("fc_preview_free") === "1"; } catch (e) { return false; } };
+  const isPlus = () => (isOwner() && !previewFree()) || (State.profile && State.profile.plan === "plus");
   const todayDaily = () => State.cookies.filter((c) => c.day === dayKey() && c.kind !== "themed" && !(c.answers && c.answers.themed)).slice(-1)[0];
   const latestToday = () => State.cookies.filter((c) => c.day === dayKey()).slice(-1)[0];
 
@@ -647,7 +649,10 @@
       ${isPlus() ? "" : '<span class="lock">🔒</span>'}<span class="k-emoji">${k.emoji}</span><h3>${esc(k.name.toUpperCase())}</h3><p>${esc(k.tag)}</p>
       <span class="k-go">${isPlus() ? "Take the 5-question quiz →" : "Unlock with Plus"}</span><img src="images/${k.pose}.png" alt=""></button>`).join("");
     $("#pricing").hidden = isPlus();
-    $("#downgradeRow").hidden = !isPlus() || isOwner();
+    // Testing toggle: owners preview Free/Plus locally; in demo mode (no Supabase) it switches the local plan.
+    const canToggle = isOwner() || (!sb && isPlus());
+    $("#downgradeRow").hidden = !canToggle;
+    $("#downgradeBtn").textContent = isOwner() ? (previewFree() ? "Back to Plus (owner testing)" : "Preview as Free (owner testing)") : "Switch back to Free (demo mode)";
   }
   $("#kindGrid").addEventListener("click", (e) => {
     const b = e.target.closest(".kind-card"); if (!b) return;
@@ -663,12 +668,23 @@
       if (confirm("Payments aren't connected yet (no Dodo link in config.js).\n\nUnlock Plus in demo mode so you can try it?")) await setPlan("plus", "Welcome to the whole universe ✦ (demo)");
       return;
     }
-    try { localStorage.setItem("fc_pending_upgrade", State.user.id); } catch (e) {}
     const ret = siteURL() + "/?upgraded=1";
     const sep = link.includes("?") ? "&" : "?";
-    location.href = link + sep + "redirect_url=" + encodeURIComponent(ret) + "&email=" + encodeURIComponent(State.user.email || "") + "&disableEmail=true";
+    // metadata_user_id travels with the subscription, so the webhook knows which account to upgrade.
+    location.href = link + sep + "redirect_url=" + encodeURIComponent(ret)
+      + "&email=" + encodeURIComponent(State.user.email || "") + "&disableEmail=true"
+      + "&metadata_user_id=" + encodeURIComponent(State.user.id);
   });
-  $("#downgradeBtn").addEventListener("click", async (e) => { e.preventDefault(); await setPlan("free", "Switched back to Free."); });
+  $("#downgradeBtn").addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (isOwner()) {
+      try { previewFree() ? sessionStorage.removeItem("fc_preview_free") : sessionStorage.setItem("fc_preview_free", "1"); } catch (err) {}
+      renderAll(); toast(previewFree() ? "Previewing Free (only on this device)." : "Back to Plus ✦");
+      return;
+    }
+    await setPlan("free", "Switched back to Free.");
+  });
+  // Only used in demo mode. With Supabase, the plan is set by the Dodo webhook (api/dodo-webhook.js).
   async function setPlan(plan, msg) {
     try { await DB.updateProfile(State.user.id, { plan }); State.profile.plan = plan; renderAll(); toast(msg); }
     catch (e) { toast("Couldn't update your plan. Try again?"); }
@@ -676,12 +692,24 @@
   async function handlePaymentReturn() {
     const p = new URLSearchParams(location.search);
     const status = (p.get("status") || "").toLowerCase();
-    const paid = p.get("upgraded") === "1" && !["failed", "cancelled", "canceled"].includes(status);
-    if (paid || ["active", "succeeded"].includes(status)) {
-      await setPlan("plus", "Payment received. Welcome to the whole universe ✦");
-      try { localStorage.removeItem("fc_pending_upgrade"); } catch (e) {}
-    } else if (["failed", "cancelled", "canceled"].includes(status)) toast("Payment didn't go through. No worries, try again anytime.");
+    const failed = ["failed", "cancelled", "canceled", "expired"].includes(status);
+    const returned = p.get("upgraded") === "1" || ["active", "succeeded"].includes(status);
     if (location.search) history.replaceState(null, "", location.pathname + location.hash);
+    if (failed) { toast("Payment didn't go through. No worries, try again anytime."); return; }
+    if (!returned || isPlus()) return;
+    // Demo mode has no server, so the browser upgrades itself.
+    if (!sb) { await setPlan("plus", "Welcome to the whole universe ✦ (demo)"); return; }
+    // With Supabase, the redirect only means "came back from checkout". The real upgrade is done by
+    // the Dodo webhook on the server, so wait for it to flip the plan (usually a few seconds).
+    toast("Confirming your payment…");
+    for (let i = 0; i < 15; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        const { data } = await sb.from("profiles").select("plan").eq("id", State.user.id).maybeSingle();
+        if (data && data.plan === "plus") { State.profile.plan = "plus"; renderAll(); toast("Payment received. Welcome to the whole universe ✦"); return; }
+      } catch (e) {}
+    }
+    toast("Payment is still processing. Plus will switch on by itself in a few minutes; just refresh.");
   }
 
   /* =========================================================
@@ -780,12 +808,11 @@
       if (!State.user) { $("#app").hidden = true; $("#auth").hidden = false; $("#demoNote").hidden = useSupabase; loader.classList.add("done"); return; }
       State.profile = await DB.profile(State.user.id);
       if (!State.user.name && State.profile.name) State.user.name = State.profile.name;
-      if (isOwner() && State.profile.plan !== "plus") { State.profile.plan = "plus"; DB.updateProfile(State.user.id, { plan: "plus" }).catch(() => {}); }
       [State.cookies, State.journals] = await Promise.all([DB.cookies(State.user.id), DB.journals(State.user.id)]);
       State.calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
       $("#auth").hidden = true; $("#app").hidden = false;
-      await handlePaymentReturn();
       renderAll();
+      handlePaymentReturn(); // runs in the background so the page isn't blocked while we wait for the webhook
       loader.classList.add("done");
       window.scrollTo(0, 0);
       if (!State.profile.onboarded) await walkthrough();
