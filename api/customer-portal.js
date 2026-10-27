@@ -22,6 +22,25 @@ const DEFAULT_RETURN_URL = "https://www.fortunecookie.fit/#plus";
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
+// Health check: open https://<your-site>/api/customer-portal in a browser.
+// It says whether the secrets are set and whether Dodo accepts the API key,
+// without ever showing the keys themselves.
+export async function GET() {
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY;
+  const base = (process.env.DODO_PAYMENTS_BASE_URL || DEFAULT_DODO_BASE_URL).replace(/\/$/, "");
+  let dodo = "missing";
+  if (apiKey) {
+    try {
+      const r = await fetch(`${base}/customers?page_size=1`, { headers: { authorization: `Bearer ${apiKey}` } });
+      dodo = r.ok ? "works" : r.status === 401 || r.status === 403 ? "rejected (wrong key, or a Test-mode key)" : `error ${r.status}`;
+    } catch (e) { dodo = "could not reach Dodo"; }
+  }
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? "set" : "missing";
+  const webhook = process.env.DODO_PAYMENTS_WEBHOOK_KEY ? "set" : "missing";
+  const ok = dodo === "works" && supabase === "set" && webhook === "set";
+  return json({ ok, dodo_api_key: dodo, supabase_service_role_key: supabase, dodo_webhook_key: webhook });
+}
+
 export async function POST(request) {
   const apiKey = process.env.DODO_PAYMENTS_API_KEY;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
