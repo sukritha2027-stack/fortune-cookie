@@ -21,5 +21,5 @@ window.FC_CONFIG = {
 
   // Shown on share cards and used for "copy link"
   APP_NAME: "Fortune Cookie",
-  SITE_URL: "" // leave empty to use the current website address
+  SITE_URL: "https://www.fortunecookie.fit" // used for share links and the return page after checkout
 };

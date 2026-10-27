@@ -653,6 +653,8 @@
     const canToggle = isOwner() || (!sb && isPlus());
     $("#downgradeRow").hidden = !canToggle;
     $("#downgradeBtn").textContent = isOwner() ? (previewFree() ? "Back to Plus (owner testing)" : "Preview as Free (owner testing)") : "Switch back to Free (demo mode)";
+    // Paying subscribers get a link to Dodo's portal to cancel, change card/UPI or download invoices.
+    $("#manageRow").hidden = !(sb && State.profile && State.profile.dodo_customer_id);
   }
   $("#kindGrid").addEventListener("click", (e) => {
     const b = e.target.closest(".kind-card"); if (!b) return;
@@ -683,6 +685,22 @@
       return;
     }
     await setPlan("free", "Switched back to Free.");
+  });
+  $("#manageBtn").addEventListener("click", async () => {
+    const btn = $("#manageBtn"); const label = btn.textContent; btn.disabled = true; btn.textContent = "OPENING…";
+    try {
+      const { data } = await sb.auth.getSession();
+      const token = data.session && data.session.access_token;
+      if (!token) throw new Error("Please log in again.");
+      const res = await fetch("/api/customer-portal", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + token },
+        body: JSON.stringify({ return_url: siteURL() + "/#plus" })
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.link) throw new Error(out.error || "Couldn't open subscription settings.");
+      location.href = out.link;
+    } catch (e) { toast(e.message || "Couldn't open subscription settings."); btn.disabled = false; btn.textContent = label; }
   });
   // Only used in demo mode. With Supabase, the plan is set by the Dodo webhook (api/dodo-webhook.js).
   async function setPlan(plan, msg) {
@@ -785,16 +803,19 @@
         ${Object.entries(C.KINDS).map(([id, k]) => { const n = kindCount[id] || 0; const pct = State.cookies.length ? (n / State.cookies.length) * 100 : 0; return `<div class="bar-row"><span style="width:150px">${k.emoji} ${esc(k.name)}</span><div class="bar"><span style="width:${pct}%;background:${k.color === "#FFE98D" ? "#f2c94c" : k.color}"></span></div><span style="width:28px;text-align:right">${n}</span></div>`; }).join("")}
       </div>`;
     const dash = $("#dash");
-    if (isPlus()) dash.innerHTML = html;
-    else dash.innerHTML = `<div class="dash-lock"><div class="modal"><img src="images/cookie-shy.png" alt="" style="width:120px;margin:0 auto" class="wobble"><h3 class="serif" style="font-size:30px;margin:8px 0">Your manifestation dashboard</h3><p>Water, mood and energy trends, intention tracking and a monthly reflection, built from your own check-ins.</p><button class="btn btn-primary" onclick="document.getElementById('upgradeBtn').click()">UNLOCK WITH PLUS ✦</button></div></div><div class="dash locked-dash" style="grid-column:1/-1">${html}</div>`;
+    if (isPlus()) { dash.innerHTML = html; return; }
+    // Free users see a blurred sample, never their real Plus insights.
+    const sample = `
+      <div class="tile"><div class="t-num">7</div><div class="t-lbl">DAY STREAK 🔥</div><div class="t-sub">Days in a row with a cookie</div></div>
+      <div class="tile"><div class="t-num">23</div><div class="t-lbl">COOKIES CRACKED 🥠</div><div class="t-sub">9 this month</div></div>
+      <div class="tile"><div class="t-num">6<small style="font-size:22px">/14</small></div><div class="t-lbl">DAYS MANIFESTED ✎</div><div class="t-sub">Journal entries this month</div></div>
+      <div class="tile"><div class="t-num">64%</div><div class="t-lbl">HYDRATION 💧</div><div class="t-sub">Getting there</div></div>
+      <div class="tile wide"><h4>YOUR MONTHLY REFLECTION ✦</h4><p class="reflection">This month you cracked <b>9</b> cookies, and the universe kept sending you <b>The Sign</b>. Your mood has been mostly <b>golden</b>.</p></div>
+      <div class="tile wide"><h4>WHAT YOU'RE CALLING IN</h4><div class="chips"><span class="chip big">sunlight</span><span class="chip big">long walks</span><span class="chip big">courage</span></div></div>`;
+    dash.innerHTML = `<div class="dash-lock"><div class="modal"><img src="images/cookie-shy.png" alt="" style="width:120px;margin:0 auto" class="wobble"><h3 class="serif" style="font-size:30px;margin:8px 0">Your manifestation dashboard</h3><p>Water, mood and energy trends, intention tracking and a monthly reflection, built from your own check-ins.</p><button class="btn btn-primary" onclick="document.getElementById('upgradeBtn').click()">UNLOCK WITH PLUS ✦</button></div></div><div class="dash locked-dash" style="grid-column:1/-1" aria-hidden="true">${sample}</div>`;
   }
 
-  /* ---------- footer modals ---------- */
-  const TEXT = {
-    privacy: `<h2 class="serif">Privacy, simply.</h2><p>We store your email, your check-in answers, your fortunes and your journal entries so we can show you your history. We never sell your data. Payments are processed by Dodo Payments; we never see your card details. You can ask us to delete your account at any time.</p>`,
-    terms: `<h2 class="serif">The tiny print.</h2><p>Fortune Cookie is for reflection and fun, not medical, financial or legal advice. Plus is billed monthly at ₹199 and can be cancelled anytime. Be kind, share generously, drink water.</p>`
-  };
-  $$("[data-modal]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); $("#textBody").innerHTML = TEXT[a.dataset.modal]; show("textOverlay"); }));
+  /* Terms, Privacy and Refund policy live on their own pages: terms.html, privacy.html, refund.html */
 
   /* =========================================================
      BOOT
