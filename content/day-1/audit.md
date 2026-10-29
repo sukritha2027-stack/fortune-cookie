@@ -43,6 +43,17 @@ Two passes. **Pass 1** was an independent reviewer (separate agent, did not see 
 | B1–B6 Brand | PASS | PASS | Only 🥠 ✦ ♡. |
 | D Safety | PASS | PASS | |
 
+## 02 addendum · ready-made reel (`assets/reel-1.mp4`)
+
+| Check | Result | Note |
+|---|---|---|
+| A2 Fortune / P.S. real | PASS | Recorded from the app itself: fortune "If it costs you your peace, it's too expensive." and P.S. "drink some water, little raisin. 💧" are live app output. |
+| A5 Date | PASS | App clock pinned to Fri 30 Oct 2026, so the card reads 30 OCT 2026. |
+| B4 Emoji | PASS | Overlays use only ✦; 💧 appears only inside the app's own P.S. |
+| C Spec | PASS | 9:16 at 1080×1920, 30 fps, 15.1 s; hook text from frame 1; crack sound at 3.3 s and the loudest moment (−0.4 dB peak); cover text inside the 3:4 grid crop. |
+| D5 Audio | PASS | Only the app's own synthesised lullaby, crack and paper sounds (README). |
+| D4 Personal data | PASS | Demo-mode account on a local copy; no real user data, no analytics hit. |
+
 ## Flag for the founder (not a piece failure)
 
 **Ref tags are not stored anywhere yet.** `app.js` never reads `?ref=`, and nothing saves it to Supabase `profiles`. After login, `handlePaymentReturn()` clears the query string (`app.js` 715). The only trace is the landing URL in Microsoft Clarity. Until ref tracking is built, Day 7's "which channel works" call will be rough.

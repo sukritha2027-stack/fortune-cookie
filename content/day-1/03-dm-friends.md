@@ -42,8 +42,8 @@ P.S. batana tera fortune kitna accurate tha ♡
 Attach your own card from today's crack (Story format, Classic style) so they see what they'll get.
 
 ## Founder steps
-1. Crack your own cookie (already done while recording the reel) and save the Story card. (0 min)
-2. Send the message to 15 friends one by one, writing a real first line for each; attach your card to the first few. (12 min)
+1. Crack your own cookie in the app and save the Story card (Classic style). (1 min)
+2. Send the message to 15 friends one by one, writing a real first line for each; attach your card to the first few. (11 min)
 3. Reply to anyone who answers within the block; repost any card they tag you in. (3 min)
 
 ## Sources

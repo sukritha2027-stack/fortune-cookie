@@ -8,17 +8,17 @@
 | # | Do this | Where | Minutes | File |
 |---|---|---|---|---|
 | 1 | Create @fortunecookie.fit, switch to Creator, add picture, name, bio, link | Instagram app | 5 | `01-instagram-profile-setup.md`, `assets/profile-picture.png` |
-| 2 | Screen-record the "raisin" crack, add 5 text overlays, post Reel 1 | Instagram | 10 | `02-instagram-reel.md` |
+| 2 | Post Reel 1: upload the ready-made video, set the cover, paste the caption | Instagram | 3 | `02-instagram-reel.md`, `assets/reel-1.mp4`, `assets/reel-1-cover.jpg` |
 | 3 | DM 15 close friends, one real first line each; reply and repost cards | Instagram DM / WhatsApp | 15 | `03-dm-friends.md` |
-| | **Total** | | **30** | |
+| | **Total** | | **23** | |
+
+The 7 spare minutes: reply to comments on the reel in its first hour.
 
 Keep for Day 2: `assets/highlight-cover-crack.png`, for the "crack ✦" highlight once your first story is up.
 
-Before you record, set the card style to **Classic** so viewers see what free users get.
-
 ## Needs you
 
-- **Pick the variants:** bio A or B, reel hook A or B, caption line A or B, DM opener A or B. Bio A and hook A are the safest picks.
+- **Pick the variants:** bio A or B and DM opener A or B (Bio A is the safest pick). The ready-made reel uses hook A and the "little raisin" P.S., so use caption first line A.
 - **Ref tags aren't tracked yet.** The app doesn't save `?ref=` on signup, so tonight you can only count total new rows in Supabase `profiles`, not which piece brought them. Claude can add ref tracking before Day 2; say the word.
 
 ## Research tools used

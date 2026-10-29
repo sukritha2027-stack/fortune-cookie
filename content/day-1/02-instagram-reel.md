@@ -4,7 +4,7 @@
 **Day / date:** Day 1 · Fri 30 Oct 2026
 **ICP:** Story-Poster
 **Goal:** Sends ("this is so you") and profile visits → crack
-**Founder time:** 10 min
+**Founder time:** 3 min (reel is pre-made)
 **Link:** bio link stays `https://www.fortunecookie.fit/?ref=ig-bio` (see 01); reel traffic counts under `ig-bio`. Reels can't carry a clickable link.
 
 ## Angle
@@ -28,7 +28,15 @@ Crack yours: link in bio ✦
 
 #fortunecookie #dailyaffirmations #manifestation #selfcare
 
-## Visual / video
+## Ready-made reel
+
+- **Video:** `assets/reel-1.mp4` — 15.1 s, 1080×1920, 30 fps, H.264 + AAC. Uses hook A and the "little raisin" P.S.
+- **Cover:** `assets/reel-1-cover.jpg` — text sits inside the 3:4 area your profile grid shows.
+- **How it was made:** Claude ran a local demo-mode copy of the app (no real account, no analytics), drove it in a headless browser at phone size with the clock set to Fri 30 Oct, recorded the screen, then added the overlays and mixed the app's own lullaby, crack and paper sounds. The fortune is real app output: "If it costs you your peace, it's too expensive." The card is the app's own Story card.
+- **Timeline:** hook 0–1.6 s · sped-up check-in 1.6–2.5 s · crack sound at 3.3 s · P.S. on screen from about 6 s, held to 10.8 s with a gentle 1.15× zoom · tap "GET MY CARD ♡" · full-screen Story card 11.1–15.1 s.
+- The shot list below is kept in case you'd rather record your own take.
+
+## Visual / video (for a self-recorded take)
 
 Screen-record on your phone with sound on. Use the **Classic** card style so viewers see what free users get.
 
@@ -44,12 +52,12 @@ Screen-record on your phone with sound on. Use the **Classic** card style so vie
 
 **Cover frame:** the 8–9 s frame with the P.S. visible. Add cover text: `my fortune cookie` / `called me a raisin`.
 
-**Edit notes:** captions burned in with Instagram's own text tool (bold sans, white with dark outline), max 2 lines, kept in the middle third so the Reels UI doesn't cover them. Total length about 14 s. No music track; the crack sound is the audio.
+**Edit notes:** captions burned in with Instagram's own text tool (bold sans, white with dark outline), max 2 lines, kept in the middle third so the Reels UI doesn't cover them. Total length 15 s (audit rule: 15–30 s). No music track; the crack sound is the audio.
 
 ## Founder steps
-1. In the app: open a fresh daily check-in, start screen recording, record the run in one take. Retake if needed. (5 min)
-2. In Instagram's reel editor: trim, speed up 2–3 s to 4x, add the 5 text overlays, set the cover. (4 min)
-3. Paste the caption and post. (1 min)
+1. Save `assets/reel-1.mp4` and `assets/reel-1-cover.jpg` to your phone. (1 min)
+2. New reel → pick the video → skip Instagram's text tool (overlays are already burned in) → Edit cover → "Add from camera roll" → the cover image. (1 min)
+3. Paste caption first line A + the caption body, then share. (1 min)
 
 ## Sources
 - [SocialPilot, Instagram Reels Algorithm 2026](https://www.socialpilot.co/blog/instagram-reels-algorithm): sends are the strongest signal for reaching non-followers; first ~3 seconds decide; short, high-completion reels win.
