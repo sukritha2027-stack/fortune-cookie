@@ -42,24 +42,15 @@ alter table public.profiles enable row level security;
 alter table public.cookies  enable row level security;
 alter table public.journal  enable row level security;
 
-drop policy if exists "profiles: read own"   on public.profiles;
-drop policy if exists "profiles: insert own" on public.profiles;
-drop policy if exists "profiles: update own" on public.profiles;
-create policy "profiles: read own"   on public.profiles for select to authenticated using (auth.uid() = id);
-create policy "profiles: insert own" on public.profiles for insert to authenticated with check (auth.uid() = id);
-create policy "profiles: update own" on public.profiles for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+-- One policy per table, matching the live database.
+drop policy if exists "profiles: own profile" on public.profiles;
+create policy "profiles: own profile" on public.profiles for all using (auth.uid() = id) with check (auth.uid() = id);
 
-drop policy if exists "cookies: read own"   on public.cookies;
-drop policy if exists "cookies: insert own" on public.cookies;
-create policy "cookies: read own"   on public.cookies for select to authenticated using (auth.uid() = user_id);
-create policy "cookies: insert own" on public.cookies for insert to authenticated with check (auth.uid() = user_id);
+drop policy if exists "cookies: own cookies" on public.cookies;
+create policy "cookies: own cookies" on public.cookies for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-drop policy if exists "journal: read own"   on public.journal;
-drop policy if exists "journal: insert own" on public.journal;
-drop policy if exists "journal: update own" on public.journal;
-create policy "journal: read own"   on public.journal for select to authenticated using (auth.uid() = user_id);
-create policy "journal: insert own" on public.journal for insert to authenticated with check (auth.uid() = user_id);
-create policy "journal: update own" on public.journal for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "journal: own journal" on public.journal;
+create policy "journal: own journal" on public.journal for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ---------- create a profile row on sign-up ----------
 create or replace function public.handle_new_user()
