@@ -50,7 +50,7 @@ content.js     question bank, cookie types, fortunes, journal prompts, walkthrou
 config.js      Supabase keys + Dodo payment link
 api/           dodo-webhook.js: switches Plus on/off · customer-portal.js: opens Dodo's manage/cancel portal
 terms.html, privacy.html, refund.html, legal.css   legal pages
-supabase/      dodo-payments.sql: columns + locks the plan column
+supabase/migrations/   all database SQL, in the order it was applied
 images/        cookie character poses
 sounds/        lullaby.mp3, crack.mp3, paper.mp3
 ```
@@ -60,10 +60,10 @@ sounds/        lullaby.mp3, crack.mp3, paper.mp3
 - `cookies`: one row per cookie: day, type, fortune, and the raw slider answers (JSON).
 - `journal`: one row per user per day with the manifest entries (JSON).
 
-All tables have Row Level Security: `auth.uid() = user_id`.
+All tables have Row Level Security so users can only read and write their own rows. Signed-in users can only update `name` and `onboarded` on their profile; `plan`, the subscription fields and `is_owner` are changed only by the server. The full SQL is in `supabase/migrations/`.
 
 ### Demo mode
-If `SUPABASE_URL` / `SUPABASE_ANON_KEY` are left empty in `config.js`, the app runs fully in the browser using localStorage, so it can be tested with zero setup.
+If `SUPABASE_URL` / `SUPABASE_ANON_KEY` are left empty in `config.js`, the app runs fully in the browser using localStorage, so it can be tested with zero setup. Plus can't be unlocked in demo mode.
 
 ---
 
@@ -76,13 +76,13 @@ Plus is a ₹199/month subscription sold through a Dodo Payments checkout link.
 3. The function verifies the signature (Standard Webhooks), finds the account from `metadata_user_id`, and sets `profiles.plan` to `plus` with the Supabase service-role key. Renewals keep it on; when a subscription is cancelled and runs out, expires or fails, the plan goes back to `free`.
 4. Back on the site, the app shows "Confirming your payment…" and waits for the webhook to flip the plan.
 
-Browsers **cannot** change their own plan: `supabase/dodo-payments.sql` revokes update rights on `plan` from signed-in users, so adding `?upgraded=1` to the URL does nothing.
+Browsers **cannot** change their own plan: the migrations revoke update rights on `plan` from signed-in users, and the `?checkout=1` return URL only tells the app to wait for the webhook.
 
 Paying subscribers get a **Manage or cancel subscription** button, which calls `api/customer-portal.js` to open Dodo's customer portal (cancel, change card/UPI, invoices).
 
-**Setup:** run `supabase/dodo-payments.sql` once in the Supabase SQL editor; add `DODO_PAYMENTS_WEBHOOK_KEY`, `DODO_PAYMENTS_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel → Settings → Environment Variables; register `https://<site>/api/dodo-webhook` in Dodo → Developer → Webhooks (live mode).
+**Setup:** run the files in `supabase/migrations/` in order in the Supabase SQL editor; add `DODO_PAYMENTS_WEBHOOK_KEY`, `DODO_PAYMENTS_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel → Settings → Environment Variables; register `https://<site>/api/dodo-webhook` in Dodo → Developer → Webhooks (live mode).
 
-Owner/test accounts listed in `PLUS_EMAILS` in `config.js` see Plus for free and get a **Preview as Free** toggle (stored only on that device) to test both tiers.
+Owner/test accounts (marked with `profiles.is_owner = true` in Supabase, see `supabase/migrations/20261115000000_owner_flag.sql`) see Plus for free and get a **Preview as Free** toggle (stored only on that device) to test both tiers.
 
 ## Run locally
 ```bash
@@ -94,5 +94,5 @@ python3 -m http.server 8000
 1. Create an account → walkthrough → check-in → tap the cookie (sound on 🔊).
 2. Get the card → try Post / Story / Square and the share buttons.
 3. Write something in Manifest → *Send it to the universe* → see the ✎ on today in the calendar.
-4. Payments are live (real ₹199 charge). To see Plus without paying, ask the owner to add your email to `PLUS_EMAILS`, or use an owner account and the *Preview as Free* toggle.
+4. Payments are live (real ₹199 charge). To see Plus without paying, ask the owner to mark your account as an owner in Supabase, or use an owner account and the *Preview as Free* toggle.
 5. As Plus: open any themed cookie, crack another daily cookie, view the dashboard.
