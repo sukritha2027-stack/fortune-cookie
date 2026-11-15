@@ -106,7 +106,8 @@
      STATE
      ========================================================= */
   const State = { user: null, profile: null, cookies: [], journals: [], calMonth: new Date(), current: null };
-  const isOwner = () => !!(State.user && State.user.email && (CFG.PLUS_EMAILS || []).map((e) => e.toLowerCase()).includes(State.user.email.toLowerCase()));
+  // Owner/tester accounts are marked in the database (profiles.is_owner), never in config.js.
+  const isOwner = () => !!(State.profile && State.profile.is_owner === true);
   // Owner accounts can preview the Free tier on this device (never saved to the database).
   const previewFree = () => { try { return sessionStorage.getItem("fc_preview_free") === "1"; } catch (e) { return false; } };
   const isPlus = () => (isOwner() && !previewFree()) || (State.profile && State.profile.plan === "plus");
@@ -649,10 +650,9 @@
       ${isPlus() ? "" : '<span class="lock">🔒</span>'}<span class="k-emoji">${k.emoji}</span><h3>${esc(k.name.toUpperCase())}</h3><p>${esc(k.tag)}</p>
       <span class="k-go">${isPlus() ? "Take the 5-question quiz →" : "Unlock with Plus"}</span><img src="images/${k.pose}.png" alt=""></button>`).join("");
     $("#pricing").hidden = isPlus();
-    // Testing toggle: owners preview Free/Plus locally; in demo mode (no Supabase) it switches the local plan.
-    const canToggle = isOwner() || (!sb && isPlus());
-    $("#downgradeRow").hidden = !canToggle;
-    $("#downgradeBtn").textContent = isOwner() ? (previewFree() ? "Back to Plus (owner testing)" : "Preview as Free (owner testing)") : "Switch back to Free (demo mode)";
+    // Testing toggle for owner accounts only: preview Free/Plus on this device (never saved).
+    $("#downgradeRow").hidden = !isOwner();
+    $("#downgradeBtn").textContent = previewFree() ? "Back to Plus (owner testing)" : "Preview as Free (owner testing)";
     // Paying subscribers get a link to Dodo's portal to cancel, change card/UPI or download invoices.
     $("#manageRow").hidden = !(sb && State.profile && State.profile.dodo_customer_id);
   }
@@ -666,11 +666,9 @@
   /* ---------- payments (Dodo) ---------- */
   $("#upgradeBtn").addEventListener("click", async () => {
     const link = (CFG.DODO_PAYMENT_LINK || "").trim();
-    if (!link) {
-      if (confirm("Payments aren't connected yet (no Dodo link in config.js).\n\nUnlock Plus in demo mode so you can try it?")) await setPlan("plus", "Welcome to the whole universe ✦ (demo)");
-      return;
-    }
-    const ret = siteURL() + "/?upgraded=1";
+    if (!link || !sb) { toast("Plus isn't available to buy right now. Try again soon ✦"); return; }
+    // Marks the return trip only. The plan is switched on by the Dodo webhook, never by this URL.
+    const ret = siteURL() + "/?checkout=1";
     const sep = link.includes("?") ? "&" : "?";
     // metadata_user_id travels with the subscription, so the webhook knows which account to upgrade.
     location.href = link + sep + "redirect_url=" + encodeURIComponent(ret)
@@ -679,12 +677,9 @@
   });
   $("#downgradeBtn").addEventListener("click", async (e) => {
     e.preventDefault();
-    if (isOwner()) {
-      try { previewFree() ? sessionStorage.removeItem("fc_preview_free") : sessionStorage.setItem("fc_preview_free", "1"); } catch (err) {}
-      renderAll(); toast(previewFree() ? "Previewing Free (only on this device)." : "Back to Plus ✦");
-      return;
-    }
-    await setPlan("free", "Switched back to Free.");
+    if (!isOwner()) return;
+    try { previewFree() ? sessionStorage.removeItem("fc_preview_free") : sessionStorage.setItem("fc_preview_free", "1"); } catch (err) {}
+    renderAll(); toast(previewFree() ? "Previewing Free (only on this device)." : "Back to Plus ✦");
   });
   $("#manageBtn").addEventListener("click", async () => {
     const btn = $("#manageBtn"); const label = btn.textContent; btn.disabled = true; btn.textContent = "OPENING…";
@@ -702,22 +697,15 @@
       location.href = out.link;
     } catch (e) { toast(e.message || "Couldn't open subscription settings."); btn.disabled = false; btn.textContent = label; }
   });
-  // Only used in demo mode. With Supabase, the plan is set by the Dodo webhook (api/dodo-webhook.js).
-  async function setPlan(plan, msg) {
-    try { await DB.updateProfile(State.user.id, { plan }); State.profile.plan = plan; renderAll(); toast(msg); }
-    catch (e) { toast("Couldn't update your plan. Try again?"); }
-  }
   async function handlePaymentReturn() {
     const p = new URLSearchParams(location.search);
     const status = (p.get("status") || "").toLowerCase();
     const failed = ["failed", "cancelled", "canceled", "expired"].includes(status);
-    const returned = p.get("upgraded") === "1" || ["active", "succeeded"].includes(status);
+    const returned = p.get("checkout") === "1" || ["active", "succeeded"].includes(status);
     if (location.search) history.replaceState(null, "", location.pathname + location.hash);
     if (failed) { toast("Payment didn't go through. No worries, try again anytime."); return; }
-    if (!returned || isPlus()) return;
-    // Demo mode has no server, so the browser upgrades itself.
-    if (!sb) { await setPlan("plus", "Welcome to the whole universe ✦ (demo)"); return; }
-    // With Supabase, the redirect only means "came back from checkout". The real upgrade is done by
+    if (!returned || isPlus() || !sb) return;
+    // The redirect only means "came back from checkout". The real upgrade is done by
     // the Dodo webhook on the server, so wait for it to flip the plan (usually a few seconds).
     toast("Confirming your payment…");
     for (let i = 0; i < 15; i++) {
